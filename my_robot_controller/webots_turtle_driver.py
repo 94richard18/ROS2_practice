@@ -4,7 +4,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 from std_srvs.srv import SetBool
 import math
-import numpy as np  # 用來計算平均值
+import numpy as np  
 
 class SmartObstacleAvoidance(Node):
     def __init__(self):
