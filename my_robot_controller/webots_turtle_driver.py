@@ -14,7 +14,7 @@ class SmartObstacleAvoidance(Node):
         self.toggle_service = self.create_service(SetBool, '/toggle_robot', self.toggle_callback)
         self.robot_active = False
 
-        # 參數化設置
+        # 設置參數
         self.declare_parameter('max_speed', 0.5)
         self.declare_parameter('min_distance', 0.3)
         self.max_speed = self.get_parameter('max_speed').value
@@ -23,15 +23,15 @@ class SmartObstacleAvoidance(Node):
         self.get_logger().info("🤖 Smart Obstacle Avoidance Node Started!")
 
     def scan_callback(self, msg):
-        """處理雷射數據以進行更智能的避障"""
+        """處理雷達數據進行避障"""
         if not self.robot_active or not msg.ranges:
             return
 
-        # 取出前方 ±30° 的距離數據，計算平均值
+        # 取出前方距離數據，以最小數值作為代表
         front_distances = msg.ranges[150:210]
         front_distance = np.nanmin(front_distances) if front_distances else float('inf')
 
-        # 取得左右側的距離數據
+        # 取得左右側的距離數據，排除 inf 後剩餘數值取平均
         left_distances = msg.ranges[0:120]
         left_distance = np.nanmean(left_distances) if left_distances else float('inf')
 
@@ -40,20 +40,14 @@ class SmartObstacleAvoidance(Node):
 
         cmd = Twist()
 
-        # 避障邏輯
+        # 避障
         if front_distance < self.min_distance:
-            # 若左右空間均充足，轉向較開放的那一側
+            # 若前方距離不足，且左右空間均充足，轉向較開放的那一側
             if left_distance > right_distance:
-                cmd.angular.z = math.pi/8  # 左轉
-            elif math.isinf(left_distance) and right_distance < 0.3: 
-                cmd.angular.z = math.pi/2
-            elif math.isinf(right_distance) and left_distance < 0.3: 
-                cmd.angular.z = -math.pi/2     
-            elif math.isinf(left_distance) and math.isinf(right_distance):
-                cmd.angular.z  = math.pi/8          
+                cmd.angular.z = math.pi/8  # 左轉    
             else:
-                cmd.angular.z = -math.pi/4 # 右轉
-            cmd.linear.x = -0.01  # 停止向前
+                cmd.angular.z = -math.pi/8 # 右轉
+            cmd.linear.x = 0.0 
         else:
             # 如果左右空間接近，則直走
             if abs(left_distance - right_distance) == 0.0:
@@ -68,7 +62,7 @@ class SmartObstacleAvoidance(Node):
         self.get_logger().info(f"Front: {front_distance:.2f}m, Left: {left_distance:.2f}m, Right: {right_distance:.2f}m")
 
     def toggle_callback(self, request, response):
-        """開關機器人的 Service 回調函數"""
+        """開關機器人的 Service"""
         cmd = Twist()
         if request.data:
             self.robot_active = True
